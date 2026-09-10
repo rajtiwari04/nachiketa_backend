@@ -16,10 +16,23 @@ userSchema.pre('save', async function(next) {
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 const teamSchema = new mongoose.Schema({
-  name: String, designation: String, department: String, avatar: String,
-  bio: String, email: String, year: String, branch: String,
-  order: { type: Number, default: 0 }, isActive: { type: Boolean, default: true },
+  name: String, position: String, designation: String, section: String, division: String,
+  department: String, photo: String, avatar: String, bio: String, email: String, year: String, branch: String,
+  linkedin: String, order: { type: Number, default: 0 }, isActive: { type: Boolean, default: true },
   socialLinks: { linkedin: String, instagram: String }, session: String,
+});
+teamSchema.pre('validate', function(next) {
+  if (this.position && !this.designation) this.designation = this.position;
+  if (this.designation && !this.position) this.position = this.designation;
+  if (this.photo && !this.avatar) this.avatar = this.photo;
+  if (this.avatar && !this.photo) this.photo = this.avatar;
+  if (this.linkedin) {
+    if (!this.socialLinks) this.socialLinks = {};
+    this.socialLinks.linkedin = this.linkedin;
+  } else if (this.socialLinks?.linkedin) {
+    this.linkedin = this.socialLinks.linkedin;
+  }
+  next();
 });
 const TeamMember = mongoose.models.TeamMember || mongoose.model('TeamMember', teamSchema);
 
@@ -82,41 +95,112 @@ const seed = async () => {
     await TeamMember.deleteMany({});
     await TeamMember.insertMany([
       {
-        name: 'Arjun Verma', designation: 'President', department: 'core',
-        order: 1, session: '2024-25', year: '4th Year', branch: 'Social Sciences',
+        name: 'Arjun Verma',
+        position: 'President',
+        section: 'leadership',
+        division: 'president',
+        order: 1,
+        session: '2024-25',
+        year: '4th Year',
+        branch: 'Social Sciences',
         bio: 'Passionate student advocate dedicated to creating awareness and building an empowered student community.',
-        socialLinks: { linkedin: 'https://linkedin.com/in/arjunverma', instagram: 'https://instagram.com/arjunverma' },
+        linkedin: 'https://linkedin.com/in/arjunverma',
       },
       {
-        name: 'Priya Singh', designation: 'Vice President', department: 'core',
-        order: 2, session: '2024-25', year: '4th Year', branch: 'Humanities',
-        bio: 'Focused on student health, mental wellbeing initiatives, and community engagement programs.',
-        socialLinks: { linkedin: 'https://linkedin.com/in/priyasingh', instagram: 'https://instagram.com/priyasingh' },
+        name: 'Rahul Gupta',
+        position: 'Management Lead',
+        section: 'leadership',
+        division: 'management',
+        order: 1,
+        session: '2024-25',
+        year: '3rd Year',
+        branch: 'Economics',
+        bio: 'Overseeing operations, initiative planning, and organizational strategy across all campus projects.',
+        linkedin: 'https://linkedin.com/in/rahulgupta',
       },
       {
-        name: 'Rahul Gupta', designation: 'Awareness & Program Head', department: 'management',
-        order: 1, session: '2024-25', year: '3rd Year', branch: 'Economics',
-        bio: 'Organizer of interactive awareness sessions on student rights, responsibilities, and government schemes.',
-        socialLinks: { linkedin: 'https://linkedin.com/in/rahulgupta', instagram: 'https://instagram.com/rahulgupta' },
+        name: 'Priya Singh',
+        position: 'Research & Policy Lead',
+        section: 'core-team',
+        division: 'research-policy',
+        order: 1,
+        session: '2024-25',
+        year: '4th Year',
+        branch: 'Humanities',
+        bio: 'Focusing on policy analysis, student rights frameworks, and educational awareness reports.',
+        linkedin: 'https://linkedin.com/in/priyasingh',
       },
       {
-        name: 'Sneha Patel', designation: 'Creative & Cultural Lead', department: 'creative',
-        order: 1, session: '2024-25', year: '3rd Year', branch: 'Design',
-        bio: 'Creating expressive spaces for students through cultural meets, creative workshops, and open conversations.',
-        socialLinks: { linkedin: 'https://linkedin.com/in/snehapatel', instagram: 'https://instagram.com/snehapatel' },
-      },
-      {
-        name: 'Vikram Rao', designation: 'Community Outreach Head', department: 'marketing',
-        order: 1, session: '2024-25', year: '3rd Year', branch: 'Management',
+        name: 'Vikram Rao',
+        position: 'Outreach Coordinator',
+        section: 'core-team',
+        division: 'outreach',
+        order: 1,
+        session: '2024-25',
+        year: '3rd Year',
+        branch: 'Management',
         bio: 'Connecting students across departments to build an inclusive and supportive society network.',
-        socialLinks: { linkedin: 'https://linkedin.com/in/vikramrao', instagram: 'https://instagram.com/vikramrao' },
+        linkedin: 'https://linkedin.com/in/vikramrao',
       },
       {
-        name: 'Prof. A. Sharma', designation: 'Faculty Advisor', department: 'advisor',
-        order: 1, session: '2024-25', isActive: true,
-        bio: 'Supporting student-led awareness initiatives, character development, and social responsibility.',
-        email: 'asharma@college.edu',
-        socialLinks: { linkedin: 'https://linkedin.com/in/profsharma', instagram: '' },
+        name: 'Sneha Patel',
+        position: 'Media & Communications Lead',
+        section: 'core-team',
+        division: 'media-communications',
+        order: 1,
+        session: '2024-25',
+        year: '3rd Year',
+        branch: 'Design',
+        bio: 'Managing internal and public communications, press releases, and media outreach.',
+        linkedin: 'https://linkedin.com/in/snehapatel',
+      },
+      {
+        name: 'Ananya Sharma',
+        position: 'Senior Research Associate',
+        section: 'core-team',
+        division: 'research',
+        order: 1,
+        session: '2024-25',
+        year: '3rd Year',
+        branch: 'Psychology',
+        bio: 'Conducting empirical studies on student wellbeing, civic participation, and academic trends.',
+        linkedin: 'https://linkedin.com/in/ananyasharma',
+      },
+      {
+        name: 'Rohan Mehta',
+        position: 'Lead Writer',
+        section: 'core-team',
+        division: 'writing',
+        order: 1,
+        session: '2024-25',
+        year: '2nd Year',
+        branch: 'English Literature',
+        bio: 'Drafting awareness publications, newsletter articles, and policy briefs for Nachiketa.',
+        linkedin: 'https://linkedin.com/in/rohanmehta',
+      },
+      {
+        name: 'Kavya Nair',
+        position: 'Social Media Lead',
+        section: 'core-team',
+        division: 'social-media',
+        order: 1,
+        session: '2024-25',
+        year: '2nd Year',
+        branch: 'Journalism',
+        bio: 'Driving digital engagement, content campaigns, and online community awareness.',
+        linkedin: 'https://linkedin.com/in/kavyanair',
+      },
+      {
+        name: 'Aditya Joshi',
+        position: 'Lead Photographer',
+        section: 'core-team',
+        division: 'photography',
+        order: 1,
+        session: '2024-25',
+        year: '3rd Year',
+        branch: 'Fine Arts',
+        bio: 'Capturing community events, story highlights, and photojournalistic documentations.',
+        linkedin: 'https://linkedin.com/in/adityajoshi',
       },
     ]);
     console.log('✅ Team members updated for Nachiketa Awareness Society');

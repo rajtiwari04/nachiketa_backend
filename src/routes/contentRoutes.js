@@ -28,21 +28,33 @@ galleryRouter.delete('/:id', protect, authorize('admin', 'superadmin'), async (r
 const teamRouter = express.Router();
 
 teamRouter.get('/', async (req, res) => {
-  const { department, session } = req.query;
-  const query = { isActive: true };
+  const { section, division, department, session, includeInactive } = req.query;
+  const query = {};
+  if (includeInactive !== 'true') {
+    query.isActive = true;
+  }
+  if (section) query.section = section;
+  if (division) query.division = division;
   if (department) query.department = department;
   if (session) query.session = session;
+
   const members = await TeamMember.find(query).sort('order');
   res.json({ success: true, members });
 });
 
 teamRouter.post('/', protect, authorize('admin', 'superadmin'), async (req, res) => {
-  const member = await TeamMember.create(req.body);
+  const member = new TeamMember(req.body);
+  await member.save();
   res.status(201).json({ success: true, member });
 });
 
 teamRouter.put('/:id', protect, authorize('admin', 'superadmin'), async (req, res) => {
-  const member = await TeamMember.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const member = await TeamMember.findById(req.params.id);
+  if (!member) {
+    return res.status(404).json({ success: false, message: 'Team member not found.' });
+  }
+  Object.assign(member, req.body);
+  await member.save();
   res.json({ success: true, member });
 });
 

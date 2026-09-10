@@ -49,21 +49,129 @@ const Gallery = mongoose.model('Gallery', gallerySchema);
 // ─── Team Member ──────────────────────────────────────────────────────────────
 const teamSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  designation: { type: String, required: true },
-  department: { type: String, enum: ['core', 'technical', 'creative', 'marketing', 'management', 'advisor'], required: true },
+  position: { type: String },
+  designation: { type: String },
+  section: {
+    type: String,
+    enum: ['leadership', 'core-team'],
+    required: true,
+  },
+  division: {
+    type: String,
+    enum: [
+      'president',
+      'management',
+      'research-policy',
+      'outreach',
+      'media-communications',
+      'research',
+      'writing',
+      'social-media',
+      'photography',
+    ],
+    required: true,
+  },
+  department: String,
+  photo: String,
   avatar: String,
   bio: { type: String, maxlength: 500 },
   email: String,
   phone: String,
   year: String,
   branch: String,
+  linkedin: String,
+  socialLinks: { linkedin: String, github: String, instagram: String, twitter: String },
   order: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
-  socialLinks: { linkedin: String, github: String, instagram: String, twitter: String },
-  session: { type: String, required: true },
-}, { timestamps: true });
+  session: { type: String, default: '2024-25' },
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+});
 
-teamSchema.index({ department: 1, order: 1 });
+teamSchema.pre('validate', function(next) {
+  // Sync position and designation
+  if (this.position && !this.designation) {
+    this.designation = this.position;
+  } else if (this.designation && !this.position) {
+    this.position = this.designation;
+  }
+  if (!this.position && !this.designation) {
+    return next(new Error('Position / Designation is required'));
+  }
+
+  // Sync photo and avatar
+  if (this.photo && !this.avatar) {
+    this.avatar = this.photo;
+  } else if (this.avatar && !this.photo) {
+    this.photo = this.avatar;
+  }
+
+  // Sync linkedin and socialLinks.linkedin
+  if (this.linkedin) {
+    if (!this.socialLinks) this.socialLinks = {};
+    this.socialLinks.linkedin = this.linkedin;
+  } else if (this.socialLinks?.linkedin) {
+    this.linkedin = this.socialLinks.linkedin;
+  }
+
+  // Legacy department fallback mapping if section/division missing
+  if (!this.section && this.department) {
+    const deptMap = {
+      core: { section: 'leadership', division: 'president' },
+      management: { section: 'leadership', division: 'management' },
+      creative: { section: 'core-team', division: 'media-communications' },
+      marketing: { section: 'core-team', division: 'outreach' },
+      technical: { section: 'core-team', division: 'research-policy' },
+      advisor: { section: 'leadership', division: 'management' },
+    };
+    const mapped = deptMap[this.department] || { section: 'core-team', division: 'research' };
+    this.section = mapped.section;
+    this.division = mapped.division;
+  }
+
+  if (this.section && !this.department) {
+    this.department = this.section;
+  }
+
+  // Validate division belongs to section
+  const validDivisions = {
+    'leadership': ['president', 'management'],
+    'core-team': [
+      'research-policy',
+      'outreach',
+      'media-communications',
+      'research',
+      'writing',
+      'social-media',
+      'photography',
+    ],
+  };
+
+  if (this.section && this.division) {
+    const allowed = validDivisions[this.section];
+    if (!allowed || !allowed.includes(this.division)) {
+      return next(new Error(`Invalid division '${this.division}' for section '${this.section}'`));
+    }
+  }
+
+  next();
+});
+
+teamSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    if (!ret.position && ret.designation) ret.position = ret.designation;
+    if (!ret.designation && ret.position) ret.designation = ret.position;
+    if (!ret.photo && ret.avatar) ret.photo = ret.avatar;
+    if (!ret.avatar && ret.photo) ret.avatar = ret.photo;
+    if (!ret.linkedin && ret.socialLinks?.linkedin) ret.linkedin = ret.socialLinks.linkedin;
+    return ret;
+  },
+});
+
+teamSchema.index({ section: 1, division: 1, order: 1 });
 const TeamMember = mongoose.model('TeamMember', teamSchema);
 
 // ─── Sponsor ──────────────────────────────────────────────────────────────────
