@@ -29,11 +29,11 @@ const eventSchema = new mongoose.Schema({
   tags: [String],
   date: { type: Date, required: [true, 'Event date is required'] },
   endDate: Date,
-  time: { type: String, required: true },
+  time: { type: String },
   venue: {
-    name: { type: String, required: true },
-    address: String,
-    mapLink: String,
+    name: { type: String, required: [true, 'Venue name is required'] },
+    address: { type: String, default: '' },
+    mapLink: { type: String, default: '' },
   },
   isPaid: { type: Boolean, default: false },
   price: { type: Number, default: 0 },
@@ -75,8 +75,40 @@ eventSchema.virtual('isSoldOut').get(function() {
   return this.registeredCount >= this.maxSeats;
 });
 
-// ─── Slug generation ──────────────────────────────────────────────────────────
-eventSchema.pre('save', function(next) {
+// ─── Normalization & Slug generation ──────────────────────────────────────────
+eventSchema.pre('validate', function(next) {
+  // Normalize venue object from potential string or flat venue fields
+  if (typeof this.venue === 'string') {
+    this.venue = { name: this.venue, address: '' };
+  }
+  if (!this.venue || typeof this.venue !== 'object') {
+    this.venue = { name: '', address: '' };
+  }
+  if (!this.venue.name && this._doc?.venueName) {
+    this.venue.name = this._doc.venueName;
+  }
+  if (!this.venue.address && this._doc?.venueAddress) {
+    this.venue.address = this._doc.venueAddress;
+  }
+
+  // Populate time if not explicitly provided
+  if (!this.time) {
+    if (this.date) {
+      try {
+        const d = new Date(this.date);
+        if (!isNaN(d.getTime())) {
+          this.time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        } else {
+          this.time = 'Time TBA';
+        }
+      } catch {
+        this.time = 'Time TBA';
+      }
+    } else {
+      this.time = 'Time TBA';
+    }
+  }
+
   if (this.isModified('title') && !this.slug) {
     this.slug = this.title
       .toLowerCase()
